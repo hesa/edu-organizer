@@ -1,0 +1,5 @@
+#!/bin/bash
+
+CLASS_NAME=$(echo $1 | sed 's,\.class,,g')
+
+java -cp . $CLASS_NAME

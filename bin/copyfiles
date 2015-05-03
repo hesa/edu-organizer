@@ -1,0 +1,20 @@
+#!/bin/sh
+
+SRC="$1"
+TO="$2" 
+
+if [ "$TO" = "" ]
+then
+	echo missing src or dest "\" $* \""
+	exit 1
+fi
+
+for i in $SRC
+do
+#    SRC_FILE=$(basename $i)
+    SRC_DIR=$(dirname $i )
+    DST_DIR=$(dirname $i )
+    mkdir -p $TO/$SRC_DIR/
+    cp $i $TO/$DST_DIR/
+done
+

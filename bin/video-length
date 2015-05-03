@@ -1,0 +1,34 @@
+#!/bin/sh
+
+VIDEOS="$*"
+
+if [ "$VIDEOS" = "" ]
+then
+	echo missing files
+	exit 1
+fi
+
+SECS=0
+for i in $VIDEOS
+do
+#    echo "$i...."
+    if [ ! -f $i ]
+    then
+	echo "File not there: $i"
+    else
+	SEC=$(mkvinfo $i | grep Duration | awk ' { print $4}' | sed 's,s,,g')
+#	echo "$i: \"$SEC\""
+	if [ "$SEC" != "" ]
+	then
+	    SECS=$(echo "$SEC + $SECS" | bc -l)
+	fi
+    fi
+done 
+
+MINS=$(echo "$SECS / 60" | bc)
+SEC_REM_=$(echo "$SECS % 60" | bc )
+SEC_REM=$(echo "$SEC_REM_" |  sed 's,\.[0-9]*,,g' )
+#echo "$SECS => $MINS  $SEC_REM "
+#echo "$SECS =>  $MINS  $SEC_REM"
+printf "$1: %d.%d minutes\n" $MINS  $SEC_REM
+
