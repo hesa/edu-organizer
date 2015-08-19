@@ -1,0 +1,289 @@
+#!/bin/bash
+
+DETAILED=false
+LEC_PATH=$1
+LO_PATH=$2
+shift
+shift
+
+STDOUT=false
+STDOUTDETAILED=false
+
+if [ "$1" = "--detailed" ]
+then
+    DETAILED=true
+    shift
+fi
+if [ "$1" = "--stdout" ]
+then
+    STDOUT=true
+    shift
+fi
+if [ "$1" = "--stdout-detailed" ]
+then
+    STDOUT=true
+    STDOUTDETAILED=true
+    shift
+fi
+if [ "$1" = "--mega-detailed" ]
+then
+    DETAILED=true
+    MEGA_DETAILED=true
+    shift
+fi
+
+LECTURES=$*
+
+PRINT_LOCATION=false
+
+CONCEPT_TMP_FILE=/tmp/$(basename $0)-$USER-concept.txt
+LECTURE_FILE=lectures.md
+CONCEPT_FILE=concepts.md
+LECTURE_TMP_FILE=/tmp/$(basename $0)-$USER-lecture.txt
+
+init_file() {
+    rm -f    $1 2>/dev/null
+    touch $1
+    #    echo  $1
+}
+
+init_file    $CONCEPT_TMP_FILE
+init_file    $CONCEPT_FILE
+init_file    $LECTURE_FILE
+init_file    $LECTURE_TMP_FILE
+
+save_lec() {
+    echo "$*" >> $LECTURE_FILE
+}
+
+save_conc() {
+    echo "$*" >> $CONCEPT_FILE
+}
+
+
+create_doc() {
+
+    LEC_CNT=0
+    
+    save_lec "# Lectures"
+    save_lec ""
+    # List lectures
+    for lec in $LECTURES
+    do
+	LEC_CNT=$(( $LEC_CNT + 1 ))
+	#    echo "LEC: $lec"
+	LNAME=$(grep NAME $LEC_PATH/$lec/Makefile| sed 's,NAME=,,g')
+	
+	echo "$lec" >> $LECTURE_TMP_FILE
+	
+	#    echo "$LNAME"
+	save_lec "# ${LEC_CNT} $LNAME "
+	save_lec ""
+	if [ "$PRINT_LOCATION" = "true" ]
+	then
+	    save_lec "*Location: $LEC_PATH/${lec}*"
+	    save_lec ""
+	fi
+	#    $LEC_PATH/$lec
+	
+	# Find LOs
+	LOS=$(grep LOS $LEC_PATH/$lec/Makefile | sed 's,LOS=,,g')
+	if [ "$LOS" != "" ]
+	then
+	    LO_CNT=0
+	    # Loop through LOs
+	    for lo in $LOS
+	    do
+		LO_CNT=$(( $LO_CNT + 1 ))
+		LO_PREFIX="${LEC_CNT}.${LO_CNT}"
+		if [ ! -d ${LO_PATH}/$lo ]
+		then
+		    save_lec " Missing Learning Object for: $lo - SHOULD YIELD ERROR IN MAKEFILE"
+		    echo "ERROR: Failed finding LO dir for: $lo (using ${LO_PATH})"
+		    echo " ls -al ${LO_PATH}/$lo"
+		    # HESA HESA, SHOULD BE EXIT 1
+		    exit 1
+		    break
+		fi
+		LONAME=$(grep NAME ${LO_PATH}/$lo/Makefile  | sed 's,NAME=,,g')
+		if [ "$LONAME" = "" ] ; then LONAME=$(basename $lo); fi
+		#	    echo " * ${LONAME}"
+		if [ "$DETAILED" = "true" ]
+		then
+		    save_lec "## ${LO_PREFIX} ${LONAME}"
+		    save_lec ""
+		    save_lec "*Location: ${lo}*"
+		    save_lec ""
+		else
+	    	    save_lec " ${LO_PREFIX}  ${LONAME}"
+		    save_lec ""
+		fi
+
+		CONCEPTS=$(grep CONCEPTS ${LO_PATH}/$lo/Makefile | sed 's,CONCEPTS=,,g')
+		if [ "$DETAILED" = "true" ]
+		then
+		    save_lec "*Introduction*" 
+		    save_lec "" 
+		    save_lec "$(cat ${LO_PATH}/$lo/doc/introduction.md)"
+		    save_lec "" 
+
+		    if [ "$MEGA_DETAILED" = "true" ]
+		    then
+			save_lec "*Purpose*" 
+			save_lec "" 
+			save_lec "$(cat ${LO_PATH}/$lo/doc/purpose.md)"
+			save_lec "" 
+			save_lec "*Goal*" 
+			save_lec "" 
+			save_lec "$(cat ${LO_PATH}/$lo/doc/goal.md)"
+			save_lec "" 
+		    fi
+		    
+		    if [ "$CONCEPTS" != "" ]
+		    then
+			save_lec "*Concepts*" 
+			save_lec "" 
+			for concept in $CONCEPTS
+			do
+			    save_lec ""
+			    save_lec "* $concept"
+#			    printf "$LNAME;$LONAME;$concept"
+	#		    printf "%.2d-%s;%.2d-%s;%s\n" "$LEC_CNT" "$(basename $lec)" "$LO_CNT" "$(basename $lo)" "$concept"
+			    printf "%.2d-%s;%.2d-%s;%s\n" "$LEC_CNT" "$(basename $lec)" "$LO_CNT" "$(basename $lo)" "$concept">> $CONCEPT_TMP_FILE
+#			    echo "$LNAME;$LONAME;$concept\n" >> $CONCEPT_TMP_FILE
+			done
+			save_lec ""
+		    fi
+		fi
+	    done
+	fi
+	save_lec ""
+
+    done
+
+    #
+    # Generate concept file
+    #
+    while (true) ; do
+	read LINE
+	if [ "$LINE" = "" ] ; then break ; fi
+	#      echo "LINE: $LINE"
+
+	LEC=$(echo $LINE | cut -d ";" -f 1)
+	LO=$(echo $LINE | cut -d ";" -f 2)
+	CONCEPT=$(echo $LINE | cut -d ";" -f 3)
+
+	PRESENT_LINE=$(grep  "^${CONCEPT}," $CONCEPT_FILE)
+
+	#     echo -n "grep:  "
+	#    grep -w "__${CONCEPT}__" $CONCEPT_FILE
+#	echo "PRESENT: \"$PRESENT_LINE\"  ('$CONCEPT') | $LEC | $LO"
+	
+	if [ "$PRESENT_LINE" = "" ]
+	then
+#	    echo "NEW: '${CONCEPT},$LEC:$LO'"
+	    save_conc "${CONCEPT},$LEC:$LO" 
+	else
+	    #echo "APPEND: '$CONCEPT' [$LEC '$LO']"
+	    grep -v -w $CONCEPT $CONCEPT_FILE > $CONCEPT_FILE.tmp
+	    mv $CONCEPT_FILE.tmp $CONCEPT_FILE
+#	    echo  "SAVING:  $PRESENT_LINE,$LEC:$LO"
+	    save_conc "$PRESENT_LINE,$LEC:$LO"
+	fi
+	#     echo ""
+	#    echo ""
+	
+    done < $CONCEPT_TMP_FILE
+
+    sort -u $CONCEPT_FILE > $CONCEPT_FILE.tmp 
+
+    rm $CONCEPT_FILE
+    while (true); do
+	read LINE
+	if [ "$LINE" = "" ] ; then break ; fi
+	CONCEPT=$(echo $LINE | cut -d "," -f 1)
+	REST=$(echo $LINE | sed "s/^$CONCEPT,//g")
+#	echo "CONCEPT: $CONCEPT"
+	echo "__${CONCEPT}__" >> $CONCEPT_FILE
+	SAVED_IFS=$IFS
+	export IFS=","
+	echo "" >> $CONCEPT_FILE
+	for i in $REST
+	do
+#	    echo " '$i' <==  '$REST' <= '$LINE' ('$CONCEPT')"
+	    CONC_LECT=$(echo $i | cut -d ":" -f 1)
+	    CONC_LO=$(echo $i | cut -d ":" -f 2)
+#	    echo "* $CONC_LECT/$CONC_LO  ('$CONCEPT')" 
+	    echo "* $CONC_LECT/$CONC_LO" >> $CONCEPT_FILE
+	    echo "" >> $CONCEPT_FILE
+	done
+	IFS=$SAVED_IFS
+	
+    done < $CONCEPT_FILE.tmp 
+
+    cat $LECTURE_FILE >  course-content.md
+    echo "# Concepts" >> course-content.md
+    echo "" >> course-content.md
+    cat $CONCEPT_FILE | awk '{ printf "%s\n\n", $0 }' >> course-content.md
+    echo "" >> course-content.md
+    echo "" >> course-content.md
+    echo "" >> course-content.md
+
+    CONC_CNT=$(grep "__" $CONCEPT_FILE | wc -l)
+}
+
+
+sumit()
+{
+    if [ "$DETAILED" = "true" ]
+    then
+	echo "$LEC_CNT Lectures:"
+	echo "------------------"
+	cat $LECTURE_TMP_FILE | cut -d ";" -f 2 
+	echo
+    else
+        echo "$LEC_CNT Lectures checked"
+    fi
+    if [ "$DETAILED" = "true" ]
+    then
+	echo "$CONC_CNT Concepts:"
+	echo "------------------"
+	cat $CONCEPT_TMP_FILE | cut -d ";" -f 3 |  sort -u
+    fi
+}
+
+list_lec_lo()
+{
+    for lec in $LECTURES
+    do
+	echo "|--- $LEC_PATH/$lec"
+	
+	LOS=$(grep LOS $LEC_PATH/$lec/Makefile | sed 's,LOS=,,g')
+	for lo in $LOS
+	do
+	    LONAME=$(grep NAME ${LO_PATH}/$lo/Makefile  | sed 's,NAME=,,g')
+	    echo -n "     |--- ${LO_PATH}/$lo"
+	    if [ "$LONAME" != "" ] ; then echo -n " ($LONAME)" ; fi
+	    echo ""
+	    if [ "$STDOUTDETAILED" = "true" ]
+	    then
+		CONCEPTS=$(grep CONCEPTS ${LO_PATH}/$lo/Makefile | sed 's,CONCEPTS=,,g')
+		for concept in $CONCEPTS
+		do
+		    echo "          |--- $concept"
+		done
+	    fi
+	done
+    done
+
+
+}
+#sumit
+
+if [ "$STDOUT" = "true" ]
+then
+    list_lec_lo
+else
+    create_doc
+    pandoc -o course-content.pdf course-content.md
+fi

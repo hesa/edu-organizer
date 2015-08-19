@@ -1,0 +1,54 @@
+#!/bin/sh
+
+SRC="$1"
+TO="$2" 
+
+if [ "$TO" = "" ]
+then
+	echo missing src or dest "\" $* \""
+	exit 1
+fi
+
+oscopy() {
+    MYSRC="$1"
+    MYDST="$2"
+    MYOSNAME="$3"
+    MYCHARSET="$4"
+
+    if [ ! -d $TO/$DST_DIR/$MYOSNAME ]
+    then
+	mkdir  $TO/$DST_DIR/$MYOSNAME
+    fi
+
+    cp $i $TO/$DST_DIR/$MYOSNAME/ 
+    if [ "$?" != "0" ] ; then exit 1 ; fi
+
+    if [ "$MYCHARSET" != "" ] 
+	then
+	cd $TO/$DST_DIR/$MYOSNAME/ && unix2$MYCHARSET $FILE  && cd - 2>/dev/null >/dev/null
+	if [ "$?" != "0" ] ; then exit 1 ; fi
+    fi
+}
+
+for i in $SRC
+do
+#    SRC_FILE=$(basename $i)
+    FILE=$(basename $i )
+    SRC_DIR=$(dirname $i )
+    DST_DIR=$(dirname $i )
+
+    mkdir -p $TO//$DST_DIR/
+
+    
+    # Windows
+    oscopy "$i" "$TO/$DST_DIR/" win dos
+
+    # Mac
+    oscopy "$i" "$TO/$DST_DIR/" mac mac
+
+    # GNU/Linux
+    oscopy "$i" "$TO/$DST_DIR/" "gnu-linux" ""
+
+
+done
+

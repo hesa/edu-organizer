@@ -33,7 +33,7 @@ then
 	rm $TMP_FILE
     fi
 
-    FILES=$(find  ./* -prune -name "*.mk" | grep -vE '(uber|most|tmp)' | sed 's,[\n\r], ,g')
+    FILES=$(find  ./* -prune -name "*.mk" | grep -vE '(uber|most|tmp|meta)' | sed 's,[\n\r], ,g')
 #    echo "FILES: $FILES"
     for i in $FILES
     do
@@ -60,7 +60,7 @@ then
 	    for i in $(cat $TMP_FILE | sort -u)
 	    do
 		#	    echo " --> $i  ==================                                                 "
-		grep "^$i:" *.mk | grep -vE '(uber|most|tmp)' | sed 's,[/a-Z\.\-]*.mk:,,g'  
+		grep "^$i:" *.mk | grep -vE '(uber|most|tmp|meta)' | sed 's,[/a-Z\.\-]*.mk:,,g'  
 	    done > tmp.mk
 	    #	echo done.
 	    ./makefile2dot.py < tmp.mk | dot -Tpng -o tmp.png

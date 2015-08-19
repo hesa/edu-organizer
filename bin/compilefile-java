@@ -1,0 +1,75 @@
+#!/bin/bash
+
+JAVA_FILE=$1
+CP="$2"
+RM="$3"
+
+#echo "=============================== $1 ============================= $2 == $3"
+
+if [ ! -f $JAVA_FILE ]
+then
+    echo File not found
+    exit 1 
+fi
+
+export MY_PACKAGE=""
+CLASS_FILE=$(echo $JAVA_FILE | sed 's,\.java,\.class,g')
+MY_PACKAGE=$(grep -w "^package" $JAVA_FILE | awk ' { print $2}' | sed 's,;,,g')
+
+if [ "x$MY_PACKAGE" != "x" ]
+then
+
+    NRDOTS=$(echo $MY_PACKAGE | tr [.] [\ ] | wc -w)
+    GO_BACK=""
+    while [ $NRDOTS -gt 0 ] 
+    do
+	GO_BACK="../$GO_BACK"
+	NRDOTS=$(( $NRDOTS - 1 ))
+    done
+#    echo "Packages only sami supported yet. ($MY_PACKAGE) ${JAVA_FILE}"
+    DIRNAME=$(dirname $JAVA_FILE)/$GO_BACK
+    NEW_MY_PACKAGE=$(echo $MY_PACKAGE | sed 's,[.],/,g')
+#echo " --------- "
+#echo " ??????????  '$MY_PACKAGE'  => '$NEW_MY_PACKAGE'"
+    FILENAME=${NEW_MY_PACKAGE}/$(basename $JAVA_FILE)
+    
+ #   echo "cd $DIRNAME && javac -cp '.:$CP' $FILENAME "
+  #  echo "PACK...:  $JAVA_FILE  :  $FILENAME"
+#    echo "cd $DIRNAME && javac -cp .:$CP $FILENAME "
+    cd $DIRNAME && javac -cp ".:$CP" $FILENAME 
+    RET=$?
+
+    cd - 2>/dev/null >/dev/null 
+
+#echo "<----------"
+    if [ "$RM" != "" ]
+    then
+	if [ -f $CLASS_FILE ]
+	then
+	    rm  $CLASS_FILE
+	fi
+    fi
+
+    exit $RET
+else
+    DIRNAME=$(dirname $JAVA_FILE)
+    FILENAME=$(basename $JAVA_FILE)
+    
+#echo "   cd $DIRNAME && javac -cp \".:$CP\" $FILENAME "
+    cd $DIRNAME && javac -cp ".:$CP" $FILENAME 
+    RET=$?
+
+    cd - 2>/dev/null >/dev/null 
+    
+    if [ "$RM" != "" ]
+    then
+	if [ -f $CLASS_FILE ]
+	then
+	    rm  $CLASS_FILE
+	fi
+    fi
+
+    exit $RET
+fi
+
+
