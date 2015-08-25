@@ -36,9 +36,14 @@ then
  #   echo "cd $DIRNAME && javac -cp '.:$CP' $FILENAME "
   #  echo "PACK...:  $JAVA_FILE  :  $FILENAME"
 #    echo "cd $DIRNAME && javac -cp .:$CP $FILENAME "
-    cd $DIRNAME && javac -cp ".:$CP" $FILENAME 
+    cd $DIRNAME && javac -cp ".:$CP" $FILENAME 2>java.err
     RET=$?
 
+    if [ $RET -ne 0 ]
+    then
+	cat java.err
+    fi
+    
     cd - 2>/dev/null >/dev/null 
 
 #echo "<----------"
@@ -56,8 +61,13 @@ else
     FILENAME=$(basename $JAVA_FILE)
     
 #echo "   cd $DIRNAME && javac -cp \".:$CP\" $FILENAME "
-    cd $DIRNAME && javac -cp ".:$CP" $FILENAME 
+    cd $DIRNAME && javac -cp ".:$CP" $FILENAME  2>java.err
     RET=$?
+    
+    if [ $RET -ne 0 ]
+    then
+	cat java.err
+    fi
 
     cd - 2>/dev/null >/dev/null 
     
