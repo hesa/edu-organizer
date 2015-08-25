@@ -1,5 +1,6 @@
 EDUO_PATH=/home/hesa/opt/edu-organizer/
 
+
 include ${EDUO_PATH}/makefiles/settings.mk
 
 
@@ -11,6 +12,8 @@ export LEC_CTR=0
 
 DATE=$(shell date '+%Y-%m-%d-%H%M%S')
 NAME=$(shell pwd | xargs basename)
+export DIST_DIR=$(DIST_DIR_BASE)/$(NAME)
+
 LOG_FILE=/tmp/edu-organiser-$(USER).log
 
 all: check
@@ -54,18 +57,22 @@ ls:
 lsd:
 	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --stdout-detailed  $(LECTURES)
 
-big-overview:
+concepts.md:
 	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --mega-detailed $(LECTURES)
+
+course-content.md:
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --mega-detailed $(LECTURES)
+
+big-overview: course-content.pdf concepts.pdf
 
 %.pdf:%.md
 	@echo "Generating $@ from $<" 
 	@pandoc $< -o $@
 
-
 #overview: check
-overview: check overview.pdf overview.md
+overview: check overview.pdf overview.md 
 
-overview.md: 
+overview.md.old: 
 	@echo "Generating $@, compiling lectures"
 	@echo "# Lectures" > overview.md
 	@LEC_NR=1 
@@ -132,22 +139,33 @@ print-los:
 	done
 
 dist:
-	@rm -f  $(DIST_DIR)/*.zip
-	make big-overview && 	mv course-content.pdf $(DIST_DIR)/course-content-big.pdf
+	@-rm -f    $(DIST_DIR)/*.zip
+	@-mkdir -p $(DIST_DIR)/
+	make big-overview && mv course-content.pdf concepts.pdf $(DIST_DIR)/
 #	make list-los     
 	@for dir in $(LECTURES) ; do \
 		LEC_CTR=` echo $$LEC_CTR + 1 | bc` ;\
 		LEC_CTR2=`printf "%.2d" $$LEC_CTR` ;\
 		LEC_NAME="$$LEC_CTR2-"`basename $$dir` ;\
-		echo mkdir -p $(DIST_DIR)/$$LEC_NAME ;\
+		mkdir -p $(DIST_DIR)/$$LEC_NAME ;\
 		echo "Making dist in $$dir ($$LEC_NAME)" ; \
 		cd $(LEC_PATH)/$$dir && make LEC_NAME=$$LEC_NAME  dist || exit 1 ; \
 	done
 
 
+megaclean: clean
+	for dir in $(LECTURES) ; do \
+		cd $(LEC_PATH)/$$dir && make megaclean ;\
+	done
 
 clean:
-	@-rm -f overview.pdf overview.md detail.pdf detail.md
+	rm -f overview.pdf overview.md detail.pdf detail.md course-content*.* concepts* *.md
 
 tar:
-	tar zcvf $(NAME)-course-$(DATE).tar.gz Lectures LearningObjects Makefile *.txt *.md
+	tar zcvf courseware-$(DATE).tar.gz $(EDUO_PATH) $(LEC_PATH)/ $(LO_PATH)/ Makefile
+
+
+display-presentations: deep-check
+	for dir in $(LECTURES) ; do \
+		cd $(LEC_PATH)/$$dir && make display-presentations ;\
+	done
