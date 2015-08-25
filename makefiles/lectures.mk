@@ -3,6 +3,13 @@ EDUO_PATH=/home/hesa/opt/edu-organizer/
 
 include ${EDUO_PATH}/makefiles/settings.mk
 
+NAME=$(shell pwd | xargs basename)
+ifeq (${DIST_DIR}, '')
+DIST_DIR=$(DIST_DIR_BASE)/Lecture/$(NAME)
+endif
+
+
+
 EDUO_BIN_PATH=${EDUO_PATH}/bin
 
 
@@ -67,4 +74,13 @@ dist:
 		LO_NAME="$$LO_CTR2"-`basename $$dir` ;\
 		echo " * making dist of: $$LEC_NAME/$$LO_NAME || $$LO_CTR $$LO_CTR2 " ; \
 		cd $(LO_PATH)/$$dir && make LEC_NAME=$$LEC_NAME LO_NAME=$$LO_NAME dist    >>$(LOG_FILE) 2>&1 || exit 1 ; \
+	done ; 
+
+
+clean:
+
+megaclean: clean
+	@echo "Cleaning up LearningObjects $$LEC_NAME:"
+	@LO_CTR=0 ; for dir in $(LOS) ; do \
+		cd $(LO_PATH)/$$dir && make clean ;\
 	done ; 
