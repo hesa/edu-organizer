@@ -8,11 +8,17 @@ LOG_FILE=/tmp/edu-organiser-$(USER).log
 
 COMPILEFILE=${EDUO_BIN_PATH}/compilefile
 COPYFILES_CODED=${EDUO_BIN_PATH}/copyfiles-coded
+COPYFILES=${EDUO_BIN_PATH}/copyfiles
 INDENT=astyle
 
 DIR=$(shell pwd | xargs basename)
 export LO_NAME=$(shell grep NAME Makefile | sed 's/NAME=//g')
 DATE=$(shell date '+%Y-%m-%d-%H%M%S')
+
+NAME=$(shell pwd | xargs basename)
+ifeq (${DIST_DIR},)
+DIST_DIR=$(DIST_DIR_BASE)/LearningObjects/$(NAME)
+endif
 
 MY_TEXINPUTS:=$(TEXINPUTS):${EDUO_PATH}/extra/beamer:.
 
@@ -159,9 +165,9 @@ $(EXERCISES_MD):
 		if [ ! -s  $$dir/Solutions/solution.md ] ; then echo "Missing solution for: $$dir "; exit 1 ; fi \
 	done ; \
 	fi
-	@if [ "$(EXERCISES_SRC)" != "" ] ; then \
-		echo "Copying exercise sources: " ; \
-		$(COPYFILES_CODED) "$(EXERCISES_SRC)" tmp/$(DIR)/$$dir/ ; \
+	@if [ "$(EXERCISES_EXTRA)" != "" ] ; then \
+		echo "Copying exercise extra files: " ; \
+		$(COPYFILES) "$(EXERCISES_EXTRA)" tmp/$(DIR)/$$dir/ ; \
 	fi
 
 $(EXERCISES_MD): $(EXERCISES) 
@@ -260,6 +266,12 @@ check-exercises:
 	@for file in $(EXERCISES_SRC) ; do \
 		$(INDENT) $$file  >$(LOG_FILE) 2>&1  ; \
 		echo -n  "  $$file: " && $(COMPILEFILE)  $$file && \
+		echo "OK" || exit 1 ; \
+        done
+	@echo "Checking exercise extra file"
+	@for file in $(EXERCISES_EXTRA) ; do \
+		echo -n  "  $$file: " && $(COMPILEFILE)  $$file && \
+		if [ ! -s $$file ] ; then echo "Missing extra file for $$dir"; exit 1 ; fi ; \
 		echo "OK" || exit 1 ; \
         done
 #	@for dir in $(EXERCISES) ; do \
