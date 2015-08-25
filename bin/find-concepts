@@ -6,8 +6,14 @@ LO_PATH=$2
 shift
 shift
 
+NAME=$(basename $(pwd))
+
 STDOUT=false
 STDOUTDETAILED=false
+
+COURSE_CONTENT=course-content.md
+COURSE_CONCEPTS=concepts.md
+    
 
 if [ "$1" = "--detailed" ]
 then
@@ -38,7 +44,7 @@ PRINT_LOCATION=false
 
 CONCEPT_TMP_FILE=/tmp/$(basename $0)-$USER-concept.txt
 LECTURE_FILE=lectures.md
-CONCEPT_FILE=concepts.md
+CONCEPT_FILE=concepts-tmp.md
 LECTURE_TMP_FILE=/tmp/$(basename $0)-$USER-lecture.txt
 
 init_file() {
@@ -64,7 +70,9 @@ save_conc() {
 create_doc() {
 
     LEC_CNT=0
-    
+
+    save_lec "# Course: $NAME"
+    save_lec ""
     save_lec "# Lectures"
     save_lec ""
     # List lectures
@@ -221,13 +229,17 @@ create_doc() {
 	
     done < $CONCEPT_FILE.tmp 
 
-    cat $LECTURE_FILE >  course-content.md
-    echo "# Concepts" >> course-content.md
-    echo "" >> course-content.md
-    cat $CONCEPT_FILE | awk '{ printf "%s\n\n", $0 }' >> course-content.md
-    echo "" >> course-content.md
-    echo "" >> course-content.md
-    echo "" >> course-content.md
+    cat $LECTURE_FILE >  $COURSE_CONTENT
+
+    rm $COURSE_CONCEPTS
+    echo "# Course: $NAME" > $COURSE_CONCEPTS
+    echo "" >> $COURSE_CONCEPTS
+    echo "# Concepts" >> $COURSE_CONCEPTS
+    echo "" >> $COURSE_CONCEPTS
+    cat $CONCEPT_FILE | awk '{ printf "%s\n\n", $0 }' >> $COURSE_CONCEPTS
+    echo "" >> $COURSE_CONCEPTS
+    echo "" >> $COURSE_CONCEPTS
+    echo "" >> $COURSE_CONCEPTS
 
     CONC_CNT=$(grep "__" $CONCEPT_FILE | wc -l)
 }
@@ -285,5 +297,5 @@ then
     list_lec_lo
 else
     create_doc
-    pandoc -o course-content.pdf course-content.md
+    pandoc -o course-content.pdf $COURSE_CONTENT
 fi
