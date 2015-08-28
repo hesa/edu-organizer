@@ -138,8 +138,11 @@ print-los:
 		echo "" ; \
 	done
 
-dist:
-	@-rm -f    $(DIST_DIR)/*.zip
+p:
+	echo "DIST_DIR: $(DIST_DIR)"
+
+dist: megaclean
+	@-rm -fr    $(DIST_DIR)/*
 	@-mkdir -p $(DIST_DIR)/
 	make big-overview && mv course-content.pdf concepts.pdf $(DIST_DIR)/
 #	make list-los     
@@ -151,7 +154,9 @@ dist:
 		echo "Making dist in $$dir ($$LEC_NAME)" ; \
 		cd $(LEC_PATH)/$$dir && make LEC_NAME=$$LEC_NAME  dist || exit 1 ; \
 	done
-
+	make all-exercises all-solutions && mv all-*.pdf $(DIST_DIR)/
+	cd $(DIST_DIR)/ && zip -r $(NAME)-$(DATE).zip .
+	echo "Created: $(DIST_DIR)/$(NAME)-$(DATE).zip"
 
 megaclean: clean
 	for dir in $(LECTURES) ; do \
@@ -164,8 +169,27 @@ clean:
 tar:
 	tar zcvf courseware-$(DATE).tar.gz $(EDUO_PATH) $(LEC_PATH)/ $(LO_PATH)/ Makefile
 
+all-exercises: 
+	@EXERC="`pwd`/all-exercises.md" ; for dir in $(LECTURES) ; do \
+		cd $(LEC_PATH)/$$dir && make EXERC=$$EXERC all-exercises   || exit 1 ;\
+	done
+	pandoc all-exercises.md -o all-exercises.pdf
+
+all-solutions:
+	@-rm -f all-solutions.md  all-solutions.pdf
+	@SOLS="`pwd`/all-solutions.md" ; for dir in $(LECTURES) ; do \
+		cd $(LEC_PATH)/$$dir && make SOLS=$$SOLS all-solutions   || exit 1 ;\
+	done
+	pandoc all-solutions.md -o all-solutions.pdf
 
 display-presentations: deep-check
 	for dir in $(LECTURES) ; do \
 		cd $(LEC_PATH)/$$dir && make display-presentations ;\
 	done
+
+
+display-exercises: deep-check
+	for dir in $(LECTURES) ; do \
+		cd $(LEC_PATH)/$$dir && make display-exercises ;\
+	done
+

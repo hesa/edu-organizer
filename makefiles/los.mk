@@ -48,7 +48,7 @@ EXAM_PDF=$(EXAM_MD:.md=.pdf)
 ALL_PDF := $(ALL_MD:.md=.pdf)
 #SOLUTIONS_PDF := $(SOLUTIONS_MD:.md=.pdf)
 
-ALL_FILES=$(VIDEOS) $(EXAM_MD_SRC) $(OVERVIEW_MD_SRC) $(PRESENTATION) $(EXERCISES) $(EXERCISES_SRC) $(SOLUTIONS_SRC) $(JAVA_FILES) $(C_FILES) 
+ALL_FILES=$(EXAM_MD_SRC) $(OVERVIEW_MD_SRC) $(PRESENTATION) $(EXERCISES) $(EXERCISES_SRC) $(SOLUTIONS_SRC) $(JAVA_FILES) $(C_FILES) 
 
 IGNORE_EXERCISES=.ignore-exercises
 
@@ -100,6 +100,13 @@ goal:
 display-presentation: check $(PRESENTATION)
 	evince $(PRESENTATION)
 
+display-exercises: check $(EXERCISES) $(SOLUTIONS) exercises solutions 
+	@echo "Exercises for $(DIR)" 
+	evince gen/exercises.pdf && evince gen/solutions.pdf || exit 1
+#	for dir in $(EXERCISES) ; do \
+#		evince gen/exercises.pdf && evince gen/solutions.pdf || exit 1 ; \
+#	done ; 
+
 ###
 
 length:
@@ -122,18 +129,33 @@ prepare-solution:
 	mkdir -p  tmp/$(DIR)
 	mkdir -p  tmp/$(DIR)/Exercises/
 
-solutions: exercises $(SOLUTIONS_PDF)
+solutions: exercises
+	if [ "$(EXERCISES)" != ".ignore-exercises" ] ; then  \
+		make $(SOLUTIONS_PDF) ;\
+	fi	
+
 exercises: 
 	rm -fr gen
 	make $(EXERCISES_PDF)
 #$(EXERCISES_PDF)
 
 $(SOLUTIONS_MD):
-	if [ ! -d gen ] ; then mkdir gen ; fi
-	@echo "# Solutions for $(DIR)" > $(SOLUTIONS_MD)
-	@echo "" >> $(SOLUTIONS_MD)
-
-	for dir in $(EXERCISES) ; do \
+	@if [ "$(EXERCISES)" = "" ] ; then \
+		echo " * " ;  \
+		echo " * " ;  \
+		echo " * ERROR Missing exercises *" ;  \
+		echo " * " ;  \
+		echo " * " ;  \
+		echo " * " ;  \
+		exit 1;       \
+	elif [ "$(EXERCISES)" = ".ignore-exercises" ] ; then  \
+		: ;\
+	else  \
+		echo "SOLUTIONS_MD" ;\
+		if [ ! -d gen ] ; then mkdir gen ; fi ; \
+	  echo "# Solutions for $(DIR)" > $(SOLUTIONS_MD) ;\
+	  echo "" >> $(SOLUTIONS_MD) ;\
+	  for dir in $(EXERCISES) ; do \
 		SHORTNAME=`basename "$$dir" ` ; \
 		if [ ! -s  $$dir/Solutions/solution.md ] ; then echo "Missing solution for: $$dir "; exit 1 ; \
 		else \
@@ -142,13 +164,22 @@ $(SOLUTIONS_MD):
 			echo "" >> $(SOLUTIONS_MD) && \
 			echo "" >> $(SOLUTIONS_MD) ; \
 		fi ; \
-	done ; 
-	if [ "$(SOLUTIONS_SRC)" != "" ] ; then \
+	  done ; \
+	  if [ "$(SOLUTIONS_SRC)" != "" ] ; then \
 		echo "Copying solution sources: " ; \
 		$(COPYFILES_CODED) "$(SOLUTIONS_SRC)" tmp/$(DIR)/$$dir/ ; \
+	  fi ; \
 	fi
 
-$(EXERCISES_MD): 
+all-exercises: $(EXERCISES_MD)
+	cat $(EXERCISES_MD) >> $(EXERC)
+
+all-solutions: $(SOLUTIONS_MD)
+	if [ "$(EXERCISES)" != ".ignore-exercises" ] ; then  \
+		cat $(SOLUTIONS_MD) >> $(SOLS) ;\
+	fi	
+
+$(EXERCISES_MD):
 	if [ ! -d gen ] ; then mkdir gen ; fi
 	@echo "# Exercises for $(LO_NAME)" > $(EXERCISES_MD)
 	@echo "" >> $(EXERCISES_MD)
@@ -172,19 +203,33 @@ $(EXERCISES_MD):
 
 $(EXERCISES_MD): $(EXERCISES) 
 
-check-presentation: $(PRESENTATION)
+check-presentation:$(PRESENTATION)
 	@echo "Checking presentation source code"
 	@for file in $(PRESENTATION_SRC) ; do \
 		echo -n  "  $$file: " && $(COMPILEFILE)  $$file && \
 		echo "OK" || exit 1 ; \
         done
+	@echo "Checking video files"
+	if [ "$(VIDEOS)" != "" ] ; \
+	   then \
+	   for vid in $(VIDEOS) ; \
+		do \
+		  test -f $(VIDEO_PATH)/$$vid || exit 1; \
+	   done ;\
+        fi
+# 		  test -f "$(VIDEO_PATH)/$$VIDEO_MD_DIR/content.md" && \
+
 
 presentation: check-presentation 
 	mkdir -p     tmp/$(DIR)/Presentation/Slides
-	if [ "$(VIDEOS)" != "" ] ; \
+	@if [ "$(VIDEOS)" != "" ] ; \
 	   then \
-	   mkdir -p     tmp/$(DIR)/Presentation/Video/ && \
-	   cp $(VIDEOS) tmp/$(DIR)/Presentation/Video/ ; \
+	   mkdir -p     tmp/$(DIR)/Presentation/Video/ ; \
+	   chmod +rw     tmp/$(DIR)/Presentation/Video/* ; \
+	   for vid in $(VIDEOS) ; \
+		do \
+		  cp "$(VIDEO_PATH)/$$vid" tmp/$(DIR)/Presentation/Video/ || exit 1; \
+	   done ;\
         fi
 	if [ "$(PRESENTATION)" != "" ] ; \
 	   then cp $(PRESENTATION) tmp/$(DIR)/Presentation/Slides; \
@@ -218,6 +263,29 @@ $(OVERVIEW_MD): $(OVERVIEW_MD_SRC)
 	echo "" >> $(OVERVIEW_MD)
 	echo "##Requirements" >> $(OVERVIEW_MD)
 	cat doc/requirements.md >> $(OVERVIEW_MD)
+
+
+	echo "" >> $(OVERVIEW_MD)
+	echo "##Videos" >> $(OVERVIEW_MD)
+	if [ "$(VIDEOS)" != "" ] ; \
+	   then \
+	   mkdir -p     tmp/$(DIR)/Presentation/Video/ ; \
+	   if [ -f doc/videos.md ] ;  \
+	   then \
+	        cat doc/videos.md >>  $(OVERVIEW_MD) ; \
+	   else \
+	        for vid in $(VIDEOS) ; \
+		do \
+		  VIDEO_MD_DIR=`dirname $$vid` ; \
+		  echo "* $$vid" >>  $(OVERVIEW_MD) ; \
+	        done ;\
+	   fi ; \
+	else \
+		echo "No videos" >>  $(OVERVIEW_MD) ;\
+	fi
+#		  echo -n    "    Concepts: " >>  $(OVERVIEW_MD) && \
+#		  cat "$(VIDEO_PATH)/$$VIDEO_MD_DIR/content.md" >>  $(OVERVIEW_MD) ; \
+
 
 	echo "" >> $(OVERVIEW_MD)
 	echo "##Reading instructions " >> $(OVERVIEW_MD)
@@ -292,8 +360,6 @@ check-exercises:
 #	done
 	@echo "Checking solution source code: OK"
 
-
-
 clean: cleancrap
 	@echo "Cleaning up"
 	@rm -f $(IGNORE_EXERCISES)
@@ -301,8 +367,9 @@ clean: cleancrap
 
 dist:	clean cleancrap check check-exercises prepare presentation exercises overview $(ALL_PDF)
 	@cp $(ALL_PDF) tmp/$(DIR)/
-	@echo "copying to:  $(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)"
-	mkdir -p           "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)/"
+	@mkdir -p             "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)/"
+	@chmod -R u+wr "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)"
+	@echo "copying to:    $(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)"
 	cd tmp/ && cp -r */* "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)/"
 
 local-dist:	clean cleancrap check check-exercises prepare presentation exercises overview $(ALL_PDF)

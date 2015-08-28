@@ -66,6 +66,29 @@ display-presentations: check
 		cd $(LO_PATH)/$$dir && make display-presentation    >>$(LOG_FILE) 2>&1 || exit 1 ; \
 	done ; 
 
+display-exercises: check
+	@echo "Looping through LearningObjects (display exercises):"
+	@for dir in $(LOS) ; do \
+		echo " * $$dir" ; \
+		cd $(LO_PATH)/$$dir && make display-exercises >>$(LOG_FILE) 2>&1 || exit 1 ; \
+	done ; 
+
+exercises: 
+	@for dir in $(LOS) ; do \
+		cd $(LO_PATH)/$$dir && make exercises || exit 1 ; \
+	done ; 
+
+all-exercises:
+#		echo "# $$dir" >> $(EXERC) ; 
+	@for dir in $(LOS) ; do \
+		cd $(LO_PATH)/$$dir && make EXERC=$(EXERC) all-exercises || exit 1 ; \
+	done ; 
+
+all-solutions:
+	@for dir in $(LOS) ; do \
+		cd $(LO_PATH)/$$dir && make SOLS=$(SOLS) all-solutions || exit 1 ; \
+	done ; 
+
 dist:
 	@echo "Looping through LearningObjects $$LEC_NAME:"
 	@LO_CTR=0 ; for dir in $(LOS) ; do \
