@@ -14,29 +14,28 @@ STDOUTDETAILED=false
 COURSE_CONTENT=course-content.md
 COURSE_CONCEPTS=concepts.md
     
-
-if [ "$1" = "--detailed" ]
-then
-    DETAILED=true
+while [ "$1" != "" ]
+do
+    if [ "$1" = "--detailed" ]
+    then
+	DETAILED=true
+    elif [ "$1" = "--stdout" ]
+    then
+	STDOUT=true
+    elif [ "$1" = "--stdout-detailed" ]
+    then
+	STDOUT=true
+	STDOUTDETAILED=true
+    elif [ "$1" = "--mega-detailed" ]
+    then
+	DETAILED=true
+	MEGA_DETAILED=true
+    else
+	break
+    fi
+    
     shift
-fi
-if [ "$1" = "--stdout" ]
-then
-    STDOUT=true
-    shift
-fi
-if [ "$1" = "--stdout-detailed" ]
-then
-    STDOUT=true
-    STDOUTDETAILED=true
-    shift
-fi
-if [ "$1" = "--mega-detailed" ]
-then
-    DETAILED=true
-    MEGA_DETAILED=true
-    shift
-fi
+done
 
 LECTURES=$*
 
@@ -120,8 +119,11 @@ create_doc() {
 		then
 		    save_lec "## ${LO_PREFIX} ${LONAME}"
 		    save_lec ""
-		    save_lec "*Location: ${lo}*"
-		    save_lec ""
+		    if [ "$PRINT_LOCATION" = "true" ]
+		    then
+			save_lec "*Location: ${lo}*"
+			save_lec ""
+		    fi
 		else
 	    	    save_lec " ${LO_PREFIX}  ${LONAME}"
 		    save_lec ""
