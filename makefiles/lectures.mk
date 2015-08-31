@@ -1,17 +1,16 @@
 EDUO_PATH=/home/hesa/opt/edu-organizer/
-
-
 include ${EDUO_PATH}/makefiles/settings.mk
 
 NAME=$(shell pwd | xargs basename)
-ifeq (${DIST_DIR}, '')
-DIST_DIR=$(DIST_DIR_BASE)/Lecture/$(NAME)
+export LEC_NAME=$(LEC_CNT)$(shell grep NAME Makefile | sed -e 's/NAME=//g' -e 's/ /\-/g' )
+export LEC_NAME_DIR=$(LEC_CNT)$(shell grep NAME Makefile | sed -e 's/NAME=//g' -e 's/ /\-/g' )
+
+ifeq (${DIST_DIR},)
+DIST_DIR=$(DIST_DIR_BASE)/Lecture/$(LEC_NAME_DIR)
 endif
-
-
+export DIST_DIR
 
 EDUO_BIN_PATH=${EDUO_PATH}/bin
-
 
 LOG_FILE=/tmp/edu-organiser-$(USER).log
 
@@ -91,13 +90,16 @@ all-solutions:
 
 dist:
 	@echo "Looping through LearningObjects $$LEC_NAME:"
+	@echo "  in lecture, DIST_DIR=$$DIST_DIR | $(DIST_DIR)"
 	@LO_CTR=0 ; for dir in $(LOS) ; do \
 		LO_CTR=` echo $$LO_CTR + 1 | bc` ;\
-		LO_CTR2=`printf "%.2d" $$LO_CTR` ;\
-		LO_NAME="$$LO_CTR2"-`basename $$dir` ;\
-		echo " * making dist of: $$LEC_NAME/$$LO_NAME || $$LO_CTR $$LO_CTR2 " ; \
-		cd $(LO_PATH)/$$dir && make LEC_NAME=$$LEC_NAME LO_NAME=$$LO_NAME dist    >>$(LOG_FILE) 2>&1 || exit 1 ; \
-	done ; 
+		LO_CTR2=`printf "%.2d-" $$LO_CTR` ;\
+		echo " * making dist of: $$LEC_NAME_DIR/$$LO_NAME || $$LO_CTR $$LO_CTR2 " ; \
+		cd $(LO_PATH)/$$dir && make DIST_DIR="$$DIST_DIR" LEC_CNT="$$LEC_CNT" LO_CNT=$$LO_CTR2 dist   || exit 1 ; \
+	done ;
+#  >>$(LOG_FILE) 2>&1
+#
+#		cd $(LO_PATH)/$$dir && make DIST_DIR="$(DIST_DIR)" LEC_NAME="$$LEC_NAME_DIR" dist || exit 1 ; \
 
 
 clean:
