@@ -12,13 +12,16 @@ COPYFILES=${EDUO_BIN_PATH}/copyfiles
 INDENT=astyle
 
 DIR=$(shell pwd | xargs basename)
-export LO_NAME=$(shell grep NAME Makefile | sed 's/NAME=//g')
+export LO_NAME=$(LO_CNT)$(shell grep NAME Makefile | sed 's/NAME=//g')
+export LO_NAME_DIR=$(LO_CNT)$(shell grep NAME Makefile | sed -e 's/NAME=//g' -e 's/ /\-/g' )
 DATE=$(shell date '+%Y-%m-%d-%H%M%S')
 
 NAME=$(shell pwd | xargs basename)
 ifeq (${DIST_DIR},)
-DIST_DIR=$(DIST_DIR_BASE)/LearningObjects/$(NAME)
+DIST_DIR=$(DIST_DIR_BASE)/LearningObjects/$(LO_NAME_DIR)
 endif
+
+LO_DIST_DIR=$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME_DIR)/
 
 MY_TEXINPUTS:=$(TEXINPUTS):${EDUO_PATH}/extra/beamer:.
 
@@ -26,6 +29,8 @@ ZIP_FILE=$(DIR)-$(DATE).zip
 SOL_ZIP_FILE=$(DIR)-solutions-$(DATE).zip
 
 OVERVIEW_MD_SRC=doc/goal.md  doc/introduction.md  doc/purpose.md  doc/requirements.md doc/reading.md doc/exam.md
+
+
 
 #export EXERCISES
 EXERCISES_MD=gen/exercises.md
@@ -132,11 +137,23 @@ prepare-solution:
 solutions: exercises
 	if [ "$(EXERCISES)" != ".ignore-exercises" ] ; then  \
 		make $(SOLUTIONS_PDF) ;\
-	fi	
+	fi
+	if [ "$(SOLUTIONS_SRC)" != "" ] ; then \
+		echo "Copying solution sources: " ; \
+		$(COPYFILES_CODED) "$(SOLUTIONS_SRC)" tmp/$(DIR)/$$dir/ ; \
+	fi ; \
 
 exercises: 
-	rm -fr gen
 	make $(EXERCISES_PDF)
+	@if [ "$(EXERCISES_EXTRA)" != "" ] ; then \
+		echo "Copying exercise extra files: " ; \
+		$(COPYFILES_CODED) "$(EXERCISES_EXTRA)" tmp/$(DIR)/$$dir/ ; \
+	fi
+	@if [ "$(EXERCISES_SRC)" != "" ] ; then \
+		echo "Copying exercise source code: " ; \
+		$(COPYFILES_CODED) "$(EXERCISES_SRC)" tmp/$(DIR)/$$dir/ ; \
+	fi
+
 #$(EXERCISES_PDF)
 
 $(SOLUTIONS_MD):
@@ -165,10 +182,6 @@ $(SOLUTIONS_MD):
 			echo "" >> $(SOLUTIONS_MD) ; \
 		fi ; \
 	  done ; \
-	  if [ "$(SOLUTIONS_SRC)" != "" ] ; then \
-		echo "Copying solution sources: " ; \
-		$(COPYFILES_CODED) "$(SOLUTIONS_SRC)" tmp/$(DIR)/$$dir/ ; \
-	  fi ; \
 	fi
 
 all-exercises: $(EXERCISES_MD)
@@ -196,17 +209,13 @@ $(EXERCISES_MD):
 		if [ ! -s  $$dir/Solutions/solution.md ] ; then echo "Missing solution for: $$dir "; exit 1 ; fi \
 	done ; \
 	fi
-	@if [ "$(EXERCISES_EXTRA)" != "" ] ; then \
-		echo "Copying exercise extra files: " ; \
-		$(COPYFILES) "$(EXERCISES_EXTRA)" tmp/$(DIR)/$$dir/ ; \
-	fi
 
 $(EXERCISES_MD): $(EXERCISES) 
 
 check-presentation:$(PRESENTATION)
 	@echo "Checking presentation source code"
 	@for file in $(PRESENTATION_SRC) ; do \
-		echo -n  "  $$file: " && $(COMPILEFILE)  $$file && \
+		pwd && echo -n  "  $$file: " && $(COMPILEFILE)  $$file && \
 		echo "OK" || exit 1 ; \
         done
 	@echo "Checking video files"
@@ -225,9 +234,10 @@ presentation: check-presentation
 	@if [ "$(VIDEOS)" != "" ] ; \
 	   then \
 	   mkdir -p     tmp/$(DIR)/Presentation/Video/ ; \
-	   chmod +rw     tmp/$(DIR)/Presentation/Video/* ; \
+	   chmod +rw    tmp/$(DIR)/Presentation/Video/* ; \
 	   for vid in $(VIDEOS) ; \
 		do \
+		  echo cp "$(VIDEO_PATH)/$$vid" tmp/$(DIR)/Presentation/Video/ || exit 1; \
 		  cp "$(VIDEO_PATH)/$$vid" tmp/$(DIR)/Presentation/Video/ || exit 1; \
 	   done ;\
         fi
@@ -263,7 +273,6 @@ $(OVERVIEW_MD): $(OVERVIEW_MD_SRC)
 	echo "" >> $(OVERVIEW_MD)
 	echo "##Requirements" >> $(OVERVIEW_MD)
 	cat doc/requirements.md >> $(OVERVIEW_MD)
-
 
 	echo "" >> $(OVERVIEW_MD)
 	echo "##Videos" >> $(OVERVIEW_MD)
@@ -365,19 +374,24 @@ clean: cleancrap
 	@rm -f $(IGNORE_EXERCISES)
 	@rm -fr tmp gen *.aux *.log  *.nav  *.out *.snm *.toc 
 
-dist:	clean cleancrap check check-exercises prepare presentation exercises overview $(ALL_PDF)
-	@cp $(ALL_PDF) tmp/$(DIR)/
-	@mkdir -p             "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)/"
-	@chmod -R u+wr "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)"
-	@echo "copying to:    $(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)"
-	cd tmp/ && cp -r */* "$(DIST_DIR)/$(LEC_NAME)/$(LO_NAME)/"
+dist:	clean cleancrap check check-exercises prepare  prepare-solution presentation solutions exercises overview dist solution-dist
+	@-cp $(ALL_PDF)        tmp/$(DIR)/
+	@mkdir -p             "$(LO_DIST_DIR)/"
+	@mkdir -p             "$(LO_DIST_DIR)/"
+	@chmod -R u+wr        "$(LO_DIST_DIR)/"
+	@echo "copying to:     $(LO_DIST_DIR)/"
+	cd tmp/ && cp -r */*  "$(LO_DIST_DIR)/"
+	pwd
+	ls -al tmp
 
-local-dist:	clean cleancrap check check-exercises prepare presentation exercises overview $(ALL_PDF)
-	cp $(ALL_PDF) tmp/$(DIR)/
+
+local-dist: clean cleancrap check check-exercises prepare presentation exercises overview prepare-solution solutions
+	-cp $(ALL_PDF) tmp/$(DIR)/
+	-cp $(SOLUTIONS_PDF) $(ALL_PDF) tmp/$(DIR)/
 	cd tmp/ && zip -r ../$(ZIP_FILE) $(DIR)
 
-solution-dist:  clean cleancrap check check-exercises prepare-solution exercises overview $(SOLUTIONS_PDF)
-	cp $(SOLUTIONS_PDF) $(ALL_PDF) tmp/$(DIR)/
+solution-dist:  clean cleancrap check check-exercises prepare-solution exercises overview 
+	-cp $(SOLUTIONS_PDF) $(ALL_PDF) tmp/$(DIR)/
 	cd tmp/ && zip -r ../$(SOL_ZIP_FILE) $(DIR)
 
 
