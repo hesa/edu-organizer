@@ -14,11 +14,19 @@ fi
 LC_FILE=$(echo $SRC_FILE | tr '[:upper:]' '[:lower:]')
 SUFFIX="${LC_FILE##*.}"
 
+#echo "COMPILE: $SUFFIX"
+
 case $SUFFIX in
     "java")
 	$DIR_NAME/compilefile-java $SRC_FILE
 	RET=$?
 #	echo "Java comp: $RET"
+	exit $RET
+	;;
+    
+    "groovy")
+	$DIR_NAME/compilefile-groovy $SRC_FILE
+	RET=$?
 	exit $RET
 	;;
     
