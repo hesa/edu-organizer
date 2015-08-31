@@ -43,8 +43,8 @@ handle_file() {
       $DEST_DIR/$FILENAME 2>&1 >/dev/null
     DIFF_RET=$?
 #    echo "$SOURCE: $DIFF_RET"
-    cp    $DRIVE_DIR/$DRIVE_PATH/Learningobjects/$SOURCE \
-      $DEST_DIR/$FILENAME
+    echo "cp    $DRIVE_DIR/$DRIVE_PATH/Learningobjects/$SOURCE   $DEST_DIR/$FILENAME"
+    cp    $DRIVE_DIR/$DRIVE_PATH/Learningobjects/$SOURCE   $DEST_DIR/$FILENAME
 }
 
 
@@ -53,7 +53,7 @@ handle_files() {
     
     cd $DRIVE_DIR  2>/dev/null >/dev/null
 
-    for i in $(find . -name "*.$EXPORT_FORMAT" | sed -e 's,Learningobjects/,,g' -e 's,\./,,g'  | grep -v -i object | grep -v -i class | grep -v Interface | grep -v main | grep -v Error | grep -v TODO | grep -v message | grep -v Groovy | grep -v Inherita)
+    for i in $(find . -name "*.$EXPORT_FORMAT" | sed -e 's,Learningobjects/,,g' -e 's,\./,,g'  | grep -v -i object | grep -v -i class | grep -v Interface | grep -v main | grep -v Error | grep -v TODO | grep -v message | grep -v Inherita)
     do
 	#    echo " * $i *"
 	handle_file $i
