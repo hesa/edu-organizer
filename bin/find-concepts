@@ -94,7 +94,7 @@ create_doc() {
 	#    $LEC_PATH/$lec
 	
 	# Find LOs
-	LOS=$(grep LOS $LEC_PATH/$lec/Makefile | sed 's,LOS=,,g')
+	LOS=$(cat $LEC_PATH/$lec/Makefile | perl -p -e 's/\\\n/ /' | grep LOS | sed 's,LOS=,,g')
 	if [ "$LOS" != "" ]
 	then
 	    LO_CNT=0
