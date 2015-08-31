@@ -8,7 +8,12 @@ EDUO_BIN_PATH=${EDUO_PATH}/bin
 
 #LEC_PATH=/home/hesa/edu/VCS/Lectures
 #LOS_PATH=/home/hesa/edu/VCS/LearningObjects
+
+ifeq (${LEC_START},)
 export LEC_CTR=0
+else
+export LEC_CTR=$(shell echo $(LEC_START) - 1 | bc )
+endif
 
 DATE=$(shell date '+%Y-%m-%d-%H%M%S')
 NAME=$(shell pwd | xargs basename)
@@ -49,19 +54,20 @@ deepest-check: check
 
 
 list-los:
-	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --detailed $(LECTURES)
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LO_PATH)  --detailed $(LECTURES)
 
 ls:
-	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --stdout  $(LECTURES)
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LO_PATH)  --stdout  $(LECTURES)
 
 lsd:
-	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --stdout-detailed  $(LECTURES)
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LO_PATH)  --stdout-detailed  $(LECTURES)
 
 concepts.md:
-	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --mega-detailed $(LECTURES)
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LO_PATH)  --mega-detailed $(LECTURES)
 
 course-content.md:
-	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH) $(LOS_PATH)  --mega-detailed $(LECTURES)
+	@$(EDUO_BIN_PATH)/find-concepts $(LEC_PATH)/ $(LO_PATH)/  --mega-detailed $(LECTURES)
+
 
 big-overview: course-content.pdf concepts.pdf
 
@@ -75,7 +81,7 @@ overview: check overview.pdf overview.md
 overview.md.old: 
 	@echo "Generating $@, compiling lectures"
 	@echo "# Lectures" > overview.md
-	@LEC_NR=1 
+	@LEC_NR=$(LEC_START)
 	@for dir in $(LECTURES) ; do \
 		LEC_NR=$$(( $$LEC_NR + 1 )) ;\
 		echo -n  " $$dir," ; \
@@ -99,7 +105,7 @@ detail: check detail.pdf detail.md
 detail.md: 
 	@echo "Generating $@, compiling lectures"
 	@echo "# Lectures" > detail.md
-	@LEC_NR=1 
+	@LEC_NR=$(LEC_START)
 	for dir in $(LECTURES) ; do \
 		export MYDIR=$$dir ;\
 		LEC_NR=$$(( $$LEC_NR + 1 )) ;\
@@ -141,8 +147,8 @@ print-los:
 p:
 	echo "DIST_DIR: $(DIST_DIR)"
 
-dist: megaclean
-	@-rm -fr    $(DIST_DIR)/*
+distold: megaclean
+	@-rm -fr   $(DIST_DIR)/*
 	@-mkdir -p $(DIST_DIR)/
 	make big-overview && mv course-content.pdf concepts.pdf $(DIST_DIR)/
 #	make list-los     
@@ -153,6 +159,20 @@ dist: megaclean
 		mkdir -p $(DIST_DIR)/$$LEC_NAME ;\
 		echo "Making dist in $$dir ($$LEC_NAME)" ; \
 		cd $(LEC_PATH)/$$dir && make LEC_NAME=$$LEC_NAME  dist || exit 1 ; \
+	done
+	make all-exercises all-solutions && mv all-*.pdf $(DIST_DIR)/
+	cd $(DIST_DIR)/ && zip -r $(NAME)-$(DATE).zip .
+	echo "Created: $(DIST_DIR)/$(NAME)-$(DATE).zip"
+
+dist: megaclean
+	@-rm -fr   $(DIST_DIR)/*
+	@-mkdir -p $(DIST_DIR)/
+	make big-overview && mv course-content.pdf concepts.pdf $(DIST_DIR)/
+#	make list-los     
+	@for dir in $(LECTURES) ; do \
+		LEC_CTR=` echo $$LEC_CTR + 1 | bc` ;\
+		LEC_CTR2=`printf "%.2d-" $$LEC_CTR` ;\
+		cd $(LEC_PATH)/$$dir && make LEC_CNT=$$LEC_CTR2 dist || exit 1 ; \
 	done
 	make all-exercises all-solutions && mv all-*.pdf $(DIST_DIR)/
 	cd $(DIST_DIR)/ && zip -r $(NAME)-$(DATE).zip .
@@ -180,7 +200,8 @@ all-solutions:
 	@SOLS="`pwd`/all-solutions.md" ; for dir in $(LECTURES) ; do \
 		cd $(LEC_PATH)/$$dir && make SOLS=$$SOLS all-solutions   || exit 1 ;\
 	done
-	pandoc all-solutions.md -o all-solutions.pdf
+	if [ -f all-solutions.md ] ; then  pandoc all-solutions.md -o all-solutions.pdf ;  fi 
+
 
 display-presentations: deep-check
 	for dir in $(LECTURES) ; do \
