@@ -1,0 +1,25 @@
+#!/bin/bash
+
+C_FILE=$1
+INC="$2"
+RM="$3"
+
+O_FILE=${C_FILE}.o
+
+gcc $INC -c $C_FILE -o $O_FILE
+RET=$?
+
+#echo
+#ls -al $C_FILE  $O_FILE
+#file $C_FILE  $O_FILE
+
+if [ "$RM" != "" ]
+then
+    if [ -f ${O_FILE} ]
+    then	
+	rm  $O_FILE
+    fi
+fi
+
+
+exit $RET
