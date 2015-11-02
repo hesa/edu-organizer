@@ -1,0 +1,23 @@
+#!/bin/bash
+
+PYTHON_FILE=$1
+CP="$2"
+RM="$3"
+
+#echo "=============================== $1 ============================= $2 == $3"
+
+if [ ! -f $PYTHON_FILE ]
+then
+    echo File not found
+    exit 1 
+fi
+
+python $PYTHON_FILE 2>python.err >python.out
+RET=$?
+
+if [ $RET -ne 0 ]
+then
+    cat python.err
+fi
+
+
