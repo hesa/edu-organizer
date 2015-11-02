@@ -1,0 +1,25 @@
+#!/bin/bash
+
+CPP_FILE=$1
+INC="$2"
+RM="$3"
+
+O_FILE=${CPP_FILE}.o
+
+g++ $INC -c $CPP_FILE -o $O_FILE
+RET=$?
+
+#echo
+#ls -al $CPP_FILE  $O_FILE
+#file $CPP_FILE  $O_FILE
+
+if [ "$RM" != "" ]
+then
+    if [ -f ${O_FILE} ]
+    then	
+	rm  $O_FILE
+    fi
+fi
+
+
+exit $RET
